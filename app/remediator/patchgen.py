@@ -36,6 +36,9 @@ import subprocess
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
+
+_OMITTED = "      ... [lines omitted: excerpt windowed around the relevant region] ..."
 
 try:
     from app.core.incident import Incident
@@ -95,7 +98,8 @@ class Remediation:
             "rationale": self.rationale, "confidence": self.confidence,
             "risk": self.risk, "reason": self.reason, "validated": self.validated,
             "validation_output": self.validation_output[:600],
-            "applied": self.applied, "attempts": self.attempts,
+            "applied": self.applied, "sandbox": self.sandbox,
+            "attempts": self.attempts,
             "reasoning_tokens": self.reasoning_tokens, "error": self.error,
         }
 
@@ -129,11 +133,12 @@ class PatchGenerator:
                 reason="no candidate file identified from the triage plan; "
                        "pass candidate_files explicitly")
 
+        hints = self._hints(inc, triage)
         excerpts: dict[str, str] = {}
         for rel in files:
             p = self.repo / rel
             if p.is_file() and self._is_text(p):
-                excerpts[rel] = self._numbered(p.read_text(errors="replace")[:8000])
+                excerpts[rel] = self._excerpt(p, hints)
         if not excerpts:
             return Remediation(reason=f"candidate files not readable: {files}")
 
@@ -191,6 +196,67 @@ class PatchGenerator:
                 f"JSON object with the same shape."
             )
         return rem
+
+    # ------------------------------------------------------- excerpt windowing
+    # A blind head-slice is a correctness bug: the defect is usually NOT near the
+    # top of the file, so the model is asked to fix code it was never shown and
+    # then (correctly) refuses. Instead: small files go in whole; for large files
+    # we window around the lines that actually match the incident's vocabulary.
+    MAX_EXCERPT_CHARS = 24000
+    WINDOW_LINES = 70
+    MAX_WINDOWS = 5
+    _STOPWORDS = frozenset({
+        "about", "above", "after", "again", "against", "because", "before",
+        "being", "below", "between", "consecutive", "could", "documented",
+        "during", "every", "first", "instead", "might", "other", "permanently",
+        "should", "samples", "sample", "their", "there", "these", "those",
+        "through", "under", "until", "where", "which", "while", "without",
+    })
+
+    @classmethod
+    def _hints(cls, inc: Incident, triage: Any) -> list[str]:
+        """Vocabulary that locates the relevant region of a large file."""
+        blobs = [getattr(triage, "signature", "") or "",
+                 getattr(triage, "root_cause", "") or "",
+                 getattr(inc, "summary", "") or ""]
+        out: list[str] = []
+        for blob in blobs:
+            for tok in re.findall(r"[A-Za-z_][A-Za-z0-9_]{4,}", blob):
+                low = tok.lower()
+                if low not in cls._STOPWORDS and low not in out:
+                    out.append(low)
+        return out
+
+    @staticmethod
+    def _merge_windows(idxs: list[int], n_lines: int) -> list[tuple[int, int]]:
+        w = PatchGenerator.WINDOW_LINES
+        spans: list[tuple[int, int]] = []
+        for i in sorted(idxs):
+            a, b = max(0, i - w), min(n_lines, i + w + 1)
+            if spans and a <= spans[-1][1]:
+                spans[-1] = (spans[-1][0], max(spans[-1][1], b))
+            else:
+                spans.append((a, b))
+        return spans[:PatchGenerator.MAX_WINDOWS]
+
+    def _excerpt(self, p: Path, hints: list[str]) -> str:
+        text = p.read_text(errors="replace")
+        lines = text.splitlines()
+        if len(text) <= self.MAX_EXCERPT_CHARS:
+            return self._numbered(text)
+
+        idxs = [i for i, line in enumerate(lines)
+                if any(h[:5] in line.lower() for h in hints)]
+        windows = self._merge_windows(idxs, len(lines))
+        if not windows:
+            head = self._numbered("\n".join(lines[:self.WINDOW_LINES]))
+            start = max(self.WINDOW_LINES, len(lines) - self.WINDOW_LINES)
+            tail = self._numbered("\n".join(lines[start:]), start=start + 1)
+            return f"{head}\n{_OMITTED}\n{tail}"
+
+        body = f"\n{_OMITTED}\n".join(
+            self._numbered("\n".join(lines[a:b]), start=a + 1) for a, b in windows)
+        return body[:self.MAX_EXCERPT_CHARS]
 
     # ------------------------------------------------------------- plan parsing
     @staticmethod
@@ -291,6 +357,10 @@ class PatchGenerator:
                     r = subprocess.run(["bash", "-n", str(f)], capture_output=True, text=True)
                     ok = ok and r.returncode == 0
                     log.append(f"{rel}: bash -n rc={r.returncode} {r.stderr.strip()[:120]}")
+                elif f.suffix in (".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"):
+                    passed, note = _typescript_check(f)
+                    ok = ok and passed
+                    log.append(f"{rel}: {note}")
 
             # difflib diff: correct by construction, applies cleanly
             parts: list[str] = []
@@ -302,6 +372,44 @@ class PatchGenerator:
             return ok, "\n".join(log), touched, "".join(parts), str(sandbox)
         except Exception as exc:  # noqa: BLE001
             return False, f"validation crashed: {type(exc).__name__}: {exc}", [], "", str(sandbox)
+
+
+# --------------------------------------------------------------- js/ts admission
+_TS_SYNTAX_CODES = ("1005", "1003", "1015", "1109", "1128", "1135", "1136", "1160",
+                    "1434", "17008", "17004")   # unterminated/expected-brace family
+_TS_BIN = Path("/home/ubuntu/hermes-agent/node_modules/.bin/tsc")
+_TS_ERR_RE = re.compile(r"error TS(\d+):\s*(.*)")
+
+
+def _typescript_check(path: Path, *, timeout: int = 90) -> tuple[bool, str]:
+    """Syntax admission for a .ts/.tsx file via `tsc --noEmit`.
+
+    Fails CLOSED on the syntax family (unbalanced braces, unterminated strings,
+    TS1xxx parse errors). Type errors (TS2xxx+) are reported but tolerated: an
+    isolated file has no ambient types, and a logic fix is not a typing exercise.
+    """
+    if not _TS_BIN.exists():
+        return True, "tsc unavailable — js/ts admission skipped (closed on syntax? no)"
+    cmd = [str(_TS_BIN), "--noEmit", "--allowJs", "--target", "es2020",
+           "--moduleResolution", "bundler", "--module", "esnext",
+           "--jsx", "preserve", "--skipLibCheck", "--pretty", "false", str(path)]
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        return False, f"tsc timed out after {timeout}s"
+    except Exception as exc:  # noqa: BLE001
+        return False, f"tsc invocation failed: {type(exc).__name__}: {exc}"
+
+    out = f"{proc.stdout}\n{proc.stderr}"
+    codes = [(m.group(1), m.group(2)[:140]) for m in _TS_ERR_RE.finditer(out)]
+    syntax = [c for c in codes if c[0] in _TS_SYNTAX_CODES]
+    types = [c for c in codes if c[0] not in _TS_SYNTAX_CODES]
+    summary = (f"tsc rc={proc.returncode} errors={len(codes)} "
+               f"(syntax={len(syntax)} type={len(types)})")
+    if syntax:
+        return False, f"{summary} SYNTAX FAIL: " + "; ".join(
+            f"TS{c}: {t}" for c, t in syntax[:4])
+    return True, summary + (f" first-type: TS{types[0][0]} {types[0][1]}" if types else " clean")
 
 
 if __name__ == "__main__":

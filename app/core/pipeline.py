@@ -167,7 +167,8 @@ class SentinelPipeline:
 
     # ------------------------------------------------------------------ report
     def run(self, inc: Incident, *, inspect: bool = False, screenshot: str | None = None,
-            remediate: bool = False, repo: str | None = None) -> Verdict:
+            remediate: bool = False, repo: str | None = None,
+            candidate_files: list[str] | None = None) -> Verdict:
         tr = self.triage(inc)
         v = Verdict(incident=inc.to_dict(), triage=asdict(tr), ok=not tr.error)
 
@@ -188,7 +189,7 @@ class SentinelPipeline:
             try:
                 from app.remediator.patchgen import PatchGenerator
                 gen = PatchGenerator(self.client, repo)
-                result = gen.propose(inc, tr)
+                result = gen.propose(inc, tr, candidate_files=candidate_files)
                 v.remediation = result.to_dict()
             except Exception as exc:  # noqa: BLE001
                 v.remediation = {"error": f"{type(exc).__name__}: {exc}"}

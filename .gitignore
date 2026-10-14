@@ -18,3 +18,5 @@ sentinel-sbx-*/
 sentinel-demo3-*/
 *.rej
 *.orig
+# runtime job logs
+runtime/
