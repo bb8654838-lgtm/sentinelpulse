@@ -1,0 +1,20 @@
+# SentinelPulse — ignore rules
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+build/
+dist/
+*.egg-info/
+
+# runtime artifacts
+demos/fixtures/*.png
+cache/
+*.log
+
+# sandboxes and scratch
+sentinel-sbx-*/
+sentinel-demo3-*/
+*.rej
+*.orig

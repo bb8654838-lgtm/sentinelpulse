@@ -1,0 +1,9 @@
+{
+  "fixtures": {
+    "broken_screenshot": "/home/ubuntu/meta-hack/demos/fixtures/dashboard_broken.png",
+    "clean_screenshot": "/home/ubuntu/meta-hack/demos/fixtures/dashboard_clean.png",
+    "nxdomain_host": "api.client.invalid",
+    "bad_url": "https://httpbin.org/status/503",
+    "ok_url": "https://httpbin.org/html"
+  }
+}
