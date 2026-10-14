@@ -30,6 +30,7 @@ from __future__ import annotations
 import ast
 import difflib
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -381,34 +382,91 @@ _TS_BIN = Path("/home/ubuntu/hermes-agent/node_modules/.bin/tsc")
 _TS_ERR_RE = re.compile(r"error TS(\d+):\s*(.*)")
 
 
-def _typescript_check(path: Path, *, timeout: int = 90) -> tuple[bool, str]:
-    """Syntax admission for a .ts/.tsx file via `tsc --noEmit`.
+_TS_TRUTHY = ("1", "on", "true", "yes")
 
-    Fails CLOSED on the syntax family (unbalanced braces, unterminated strings,
-    TS1xxx parse errors). Type errors (TS2xxx+) are reported but tolerated: an
-    isolated file has no ambient types, and a logic fix is not a typing exercise.
+
+def _ts_strict_config(layer: Path, target: Path) -> Path:
+    """Build a throwaway tsconfig that resolves bare imports out of `layer`.
+
+    Type-checking a bare clone fails every `import react` with TS2307 because
+    the tree has no `node_modules`. Mapping `*` -> `<layer>/*` lets one cached
+    dependency layer (built once per target repo, reused across jobs) serve any
+    number of sandboxes without re-running `npm ci` per job.
     """
+    cfg_path = target.parent / ".sentinel-tsconfig.json"
+    cfg_path.write_text(json.dumps({
+        "compilerOptions": {
+            "noEmit": True, "allowJs": True, "target": "es2020",
+            "module": "esnext", "moduleResolution": "bundler", "jsx": "preserve",
+            "skipLibCheck": True,
+            "paths": {"*": [str(layer / "*")]},
+        },
+        "files": [str(target)],
+    }))
+    return cfg_path
+
+
+def _typescript_check(path: Path, *, timeout: int = 90,
+                      typecheck: bool | None = None,
+                      layer: str | None = None) -> tuple[bool, str]:
+    """Admission for a .ts/.tsx file via `tsc --noEmit` — two-tier by default.
+
+    Default (prototype) mode: the syntax family (TS1xxx parse errors) fails
+    CLOSED; type errors (TS2xxx+) are reported but tolerated. An isolated file
+    has no ambient types, and a logic fix is not a typing exercise.
+
+    Opt-in strict mode (`SENTINEL_TS_TYPECHECK=1`, or `typecheck=True`) promotes
+    type errors to BLOCKING — but only when a dependency layer is actually
+    resolvable via `SENTINEL_TS_LAYER` (or `layer=`). Strict mode with no layer
+    degrades to the two-tier gate and says so in the log, instead of failing
+    every patch on TS2307. Strict mode is never on the default path: the
+    per-job `npm ci` latency penalty stays opt-in.
+    """
+    if typecheck is None:
+        typecheck = os.environ.get("SENTINEL_TS_TYPECHECK", "off").strip().lower() in _TS_TRUTHY
+    if layer is None:
+        layer = os.environ.get("SENTINEL_TS_LAYER", "").strip()
+    layer_path = Path(layer) if layer else None
+    strict = bool(typecheck and layer_path and layer_path.is_dir())
+
     if not _TS_BIN.exists():
         return True, "tsc unavailable — js/ts admission skipped (closed on syntax? no)"
-    cmd = [str(_TS_BIN), "--noEmit", "--allowJs", "--target", "es2020",
-           "--moduleResolution", "bundler", "--module", "esnext",
-           "--jsx", "preserve", "--skipLibCheck", "--pretty", "false", str(path)]
+    cfg_path: Path | None = None
+    if strict:
+        try:
+            cfg_path = _ts_strict_config(layer_path, path)
+            cmd = [str(_TS_BIN), "-p", str(cfg_path)]
+        except Exception as exc:  # noqa: BLE001
+            return False, f"tsc config build failed: {type(exc).__name__}: {exc}"
+    else:
+        cmd = [str(_TS_BIN), "--noEmit", "--allowJs", "--target", "es2020",
+               "--moduleResolution", "bundler", "--module", "esnext",
+               "--jsx", "preserve", "--skipLibCheck", "--pretty", "false", str(path)]
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
     except subprocess.TimeoutExpired:
         return False, f"tsc timed out after {timeout}s"
     except Exception as exc:  # noqa: BLE001
         return False, f"tsc invocation failed: {type(exc).__name__}: {exc}"
+    finally:
+        if cfg_path is not None:
+            cfg_path.unlink(missing_ok=True)
 
     out = f"{proc.stdout}\n{proc.stderr}"
     codes = [(m.group(1), m.group(2)[:140]) for m in _TS_ERR_RE.finditer(out)]
     syntax = [c for c in codes if c[0] in _TS_SYNTAX_CODES]
     types = [c for c in codes if c[0] not in _TS_SYNTAX_CODES]
-    summary = (f"tsc rc={proc.returncode} errors={len(codes)} "
+    mode = "typecheck+layer" if strict else "syntax-only"
+    summary = (f"tsc[{mode}] rc={proc.returncode} errors={len(codes)} "
                f"(syntax={len(syntax)} type={len(types)})")
+    if typecheck and not strict:
+        summary += f" (typecheck requested, no layer at {layer or '<unset>'} — degraded)"
     if syntax:
         return False, f"{summary} SYNTAX FAIL: " + "; ".join(
             f"TS{c}: {t}" for c, t in syntax[:4])
+    if strict and types:
+        return False, f"{summary} TYPE FAIL: " + "; ".join(
+            f"TS{c}: {t}" for c, t in types[:4])
     return True, summary + (f" first-type: TS{types[0][0]} {types[0][1]}" if types else " clean")
 
 
