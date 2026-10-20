@@ -7,6 +7,7 @@ classifies the signature and proposes a plan; Python owns the control flow,
 the guardrails and the record-keeping.
 
 Pipeline stages
+  0. GATE      rules + tier-0 model (gatekeeper.py) -> drop noise, escalate signal
   1. COLLECT   probes measure the target (DNS / HTTP / headers / screenshot)
   2. TRIAGE    incident.brief() -> muse-spark-1.3 -> signature + severity + plan
   3. LOCATE    optional: visual inspector on the captured screenshot
@@ -92,6 +93,7 @@ class Verdict:
     visual: dict | None = None
     remediation: dict | None = None
     ok: bool = True
+    stages: list[dict] = field(default_factory=list)
 
     def to_json(self) -> str:
         return json.dumps(asdict(self), indent=2, default=str)
@@ -102,10 +104,41 @@ class SentinelPipeline:
 
     def __init__(self, client: MetaClient | None = None,
                  triage_model: str = "muse-spark-1.3",
-                 reasoning_effort: str = "low"):
+                 reasoning_effort: str = "low",
+                 gate_enabled: bool = True,
+                 tier0_model: str | None = None):
         self.client = client or MetaClient()
         self.triage_model = triage_model
         self.reasoning_effort = reasoning_effort
+        self.gate_enabled = gate_enabled
+        self.tier0_model = tier0_model
+        self._gate = None
+        self.stages: list[dict] = []      # per-run stage accounting (gate + triage)
+
+    # --------------------------------------------------------------- stage 0/1
+    @property
+    def gate(self):
+        """Lazy Tier0Gate (no model resolution until the first real incident)."""
+        if self._gate is None:
+            try:
+                from app.core.gatekeeper import TIER0_CHAIN, Tier0Gate
+            except ImportError:  # pragma: no cover
+                from app.core.gatekeeper import TIER0_CHAIN, Tier0Gate  # type: ignore
+            chain = ((self.tier0_model,) + TIER0_CHAIN) if self.tier0_model else TIER0_CHAIN
+            self._gate = Tier0Gate(self.client, chain=chain)
+        return self._gate
+
+    def prefilter(self, inc: Incident):
+        """Run the stage-0/1 gate. Always returns a Gate (fail-open on error)."""
+        from app.core.gatekeeper import Gate
+        if not self.gate_enabled:
+            return Gate(route="escalate", stage="off", reason="gate disabled")
+        g = self.gate.classify(inc)
+        self.stages.append({"stage": f"gate-{g.stage}", "route": g.route, "code": g.code,
+                            "model": g.model, "latency_s": g.latency_s,
+                            "tokens": g.total_tokens, "reason": g.reason,
+                            "error": g.error})
+        return g
 
     # ------------------------------------------------------------------ triage
     def triage(self, inc: Incident) -> Triage:
@@ -130,6 +163,10 @@ class SentinelPipeline:
         except Exception as exc:  # noqa: BLE001
             tr.error = f"unparsed triage output: {exc}"
             return tr
+
+        self.stages.append({"stage": "triage", "model": self.triage_model,
+                            "latency_s": tr.latency_s, "tokens": tr.reasoning_tokens,
+                            "signature": str(data.get("signature", ""))})
 
         tr.signature = str(data.get("signature", "UNCLASSIFIED"))
         tr.confidence = float(data.get("confidence", 0.0) or 0.0)
@@ -169,8 +206,24 @@ class SentinelPipeline:
     def run(self, inc: Incident, *, inspect: bool = False, screenshot: str | None = None,
             remediate: bool = False, repo: str | None = None,
             candidate_files: list[str] | None = None) -> Verdict:
+        self.stages = []                      # fresh stage log for this run
+        gate = self.prefilter(inc) if self.gate_enabled else None
+        if gate is not None and gate.route == "drop":
+            dropped = Triage(signature="TIER0_DROPPED", confidence=gate.confidence,
+                             root_cause=f"stage-{gate.stage} gate: {gate.reason}",
+                             blast_radius="local")
+            payload = asdict(dropped)
+            payload["gate"] = asdict(gate)
+            payload["dropped_by"] = gate.code or f"tier0/{gate.stage}"
+            return Verdict(incident=inc.to_dict(), triage=payload, ok=True,
+                           stages=list(self.stages))
+
         tr = self.triage(inc)
-        v = Verdict(incident=inc.to_dict(), triage=asdict(tr), ok=not tr.error)
+        payload = asdict(tr)
+        if gate is not None:
+            payload["gate"] = asdict(gate)
+        v = Verdict(incident=inc.to_dict(), triage=payload, ok=not tr.error,
+                    stages=list(self.stages))
 
         if inspect and screenshot:
             try:
@@ -201,7 +254,7 @@ if __name__ == "__main__":
     import sys
 
     target = sys.argv[1] if len(sys.argv) > 1 else "api.client.example.com"
-    pipe = SentinelPipeline()
+    pipe = SentinelPipeline()   # gate_enabled=True: stage 0/1 runs before triage
     incidents = pipe.collect(target)
     if not incidents:
         incidents = [IncidentFactory_stub(target)] if False else []
