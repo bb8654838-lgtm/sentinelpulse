@@ -2,7 +2,7 @@
   "kind": "sentinelpulse-demo-bundle",
   "track": "indie",
   "mode": "replay",
-  "generated_at": "2026-10-27T17:30:21+00:00",
+  "generated_at": "2026-10-27T17:46:35+00:00",
   "product": {
     "name": "SentinelPulse",
     "one_liner": "An incident-triage agent that drops the noise before it costs a token, then plans the fix for what is left.",

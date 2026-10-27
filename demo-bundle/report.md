@@ -1,6 +1,6 @@
 # SentinelPulse — demo bundle (replay)
 
-Track: **indie** · generated 2026-10-27T17:30:21+00:00
+Track: **indie** · generated 2026-10-27T17:46:35+00:00
 
 ## Claims and the evidence behind them
 
