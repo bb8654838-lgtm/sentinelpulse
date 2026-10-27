@@ -1,0 +1,37 @@
+{
+  "kind": "l2-evidence-freeze",
+  "product": "SentinelPulse",
+  "lane": "L2 -> L3 handoff",
+  "frozen_at": "2026-10-27T15:27:16+00:00",
+  "root": "/home/ubuntu/meta-hack",
+  "artifacts": [
+    {
+      "path": "bench/evidence/tier0-bench-LIVE-20261027.json",
+      "bytes": 10721,
+      "sha256": "0071ca3a688c165ec2e1939a8ffc7e50e2f34ef514a23e156749e7011caa1105",
+      "mtime": "2026-10-27T14:51:28.834337+00:00",
+      "state": "frozen"
+    },
+    {
+      "path": "bench/evidence/tier0-bench-20261020.json",
+      "bytes": 10777,
+      "sha256": "7dd3262e1d6107384b90d6e7e2484ed11bc18d741d32aca9ed7c009acd8dc3e2",
+      "mtime": "2026-10-20T11:45:33.388494+00:00",
+      "state": "frozen"
+    },
+    {
+      "path": "bench/tier0_bench.py",
+      "bytes": 8556,
+      "sha256": "ef4da6ac4e608c529c4153e11a08e678415fd9fac2dcf3515b21aba9febc78c5",
+      "mtime": "2026-10-20T11:12:04.893550+00:00",
+      "state": "frozen"
+    },
+    {
+      "path": "app/core/gatekeeper.py",
+      "bytes": 10679,
+      "sha256": "22a42e07472beee5203d4444b3042b45390577c9289527fe1c992a1be3edb948",
+      "mtime": "2026-10-20T11:06:30.466189+00:00",
+      "state": "frozen"
+    }
+  ]
+}

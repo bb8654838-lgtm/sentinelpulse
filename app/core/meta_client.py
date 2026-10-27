@@ -50,7 +50,8 @@ from typing import Any
 
 BASE_URL = "https://api.meta.ai/v1"
 ENV_KEY_HELPER = "/home/ubuntu/.hermes/scripts/env-key.sh"
-ENV_VAR = "META_MODEL_API_KEY"
+ENV_VARS = ("MODEL_API_KEY", "META_MODEL_API_KEY")
+ENV_VAR = ENV_VARS[0]  # portal/runtime contract name; legacy name still honoured
 
 # Practical reasoning floor. Below this, Muse Spark spends the whole budget
 # thinking and returns content=null (measured at 800 and 1200 tokens).
@@ -95,21 +96,26 @@ class MetaReply:
 
 def load_api_key() -> str:
     """Resolve the key. Environment first, then the sanctioned R6 helper."""
-    key = os.environ.get(ENV_VAR, "").strip()
-    if key:
-        return key
-    try:
-        key = subprocess.run(
-            ["bash", ENV_KEY_HELPER, ENV_VAR],
-            capture_output=True, text=True, timeout=20, check=True,
-        ).stdout.strip()
-    except Exception as exc:  # noqa: BLE001
-        raise RuntimeError(
-            f"{ENV_VAR} not in environment and `env-key.sh {ENV_VAR}` failed: {exc}"
-        ) from exc
-    if not key:
-        raise RuntimeError(f"{ENV_VAR} resolved empty")
-    return key
+    for name in ENV_VARS:
+        key = os.environ.get(name, "").strip()
+        if key:
+            return key
+    last_exc = None
+    for name in ENV_VARS:
+        try:
+            key = subprocess.run(
+                ["bash", ENV_KEY_HELPER, name],
+                capture_output=True, text=True, timeout=20, check=True,
+            ).stdout.strip()
+        except Exception as exc:  # noqa: BLE001
+            last_exc = exc
+            continue
+        if key:
+            return key
+    raise RuntimeError(
+        f"no API key: tried {', '.join(ENV_VARS)} in env and via "
+        f"`env-key.sh` (last error: {last_exc})"
+    )
 
 
 def to_data_url(path: str | Path) -> str:

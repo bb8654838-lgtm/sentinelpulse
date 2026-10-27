@@ -1,0 +1,246 @@
+{
+  "kind": "sentinelpulse-demo-bundle",
+  "track": "indie",
+  "mode": "replay",
+  "generated_at": "2026-10-27T17:30:21+00:00",
+  "product": {
+    "name": "SentinelPulse",
+    "one_liner": "An incident-triage agent that drops the noise before it costs a token, then plans the fix for what is left.",
+    "models": {
+      "tier0_gate": "muse-spark-1.3 (low effort)",
+      "tier1_triage": "muse-spark-1.3"
+    }
+  },
+  "freeze": {
+    "manifest": "bench/evidence/FREEZE-20261027.json",
+    "frozen_at": "2026-10-27T15:27:16+00:00",
+    "artifacts": [
+      {
+        "path": "bench/evidence/tier0-bench-LIVE-20261027.json",
+        "bytes": 10721,
+        "sha256": "0071ca3a688c165ec2e1939a8ffc7e50e2f34ef514a23e156749e7011caa1105",
+        "mtime": "2026-10-27T14:51:28.834337+00:00",
+        "state": "frozen"
+      },
+      {
+        "path": "bench/evidence/tier0-bench-20261020.json",
+        "bytes": 10777,
+        "sha256": "7dd3262e1d6107384b90d6e7e2484ed11bc18d741d32aca9ed7c009acd8dc3e2",
+        "mtime": "2026-10-20T11:45:33.388494+00:00",
+        "state": "frozen"
+      },
+      {
+        "path": "bench/tier0_bench.py",
+        "bytes": 8556,
+        "sha256": "ef4da6ac4e608c529c4153e11a08e678415fd9fac2dcf3515b21aba9febc78c5",
+        "mtime": "2026-10-20T11:12:04.893550+00:00",
+        "state": "frozen"
+      },
+      {
+        "path": "app/core/gatekeeper.py",
+        "bytes": 10679,
+        "sha256": "22a42e07472beee5203d4444b3042b45390577c9289527fe1c992a1be3edb948",
+        "mtime": "2026-10-20T11:06:30.466189+00:00",
+        "state": "frozen"
+      }
+    ]
+  },
+  "bench": {
+    "source": "bench/evidence/tier0-bench-LIVE-20261027.json",
+    "sha256_actual": "0071ca3a688c165ec2e1939a8ffc7e50e2f34ef514a23e156749e7011caa1105",
+    "sha256_frozen": "0071ca3a688c165ec2e1939a8ffc7e50e2f34ef514a23e156749e7011caa1105",
+    "fixtures": 7,
+    "arms": {
+      "baseline_gate_off": {
+        "model_calls": 7,
+        "tokens": 5533,
+        "latency_s": 36.8,
+        "tokens_by_stage": {
+          "triage": {
+            "calls": 7,
+            "tokens": 5533
+          }
+        },
+        "noise_escalated": 4,
+        "calls_on_noise": 4,
+        "rules_dropped": 0,
+        "INCIDENT_MISSES": [],
+        "errors": []
+      },
+      "tiered_gate_on": {
+        "model_calls": 6,
+        "tokens": 4802,
+        "latency_s": 29.5,
+        "tokens_by_stage": {
+          "gate-1": {
+            "calls": 3,
+            "tokens": 2314
+          },
+          "triage": {
+            "calls": 3,
+            "tokens": 2488
+          }
+        },
+        "noise_escalated": 0,
+        "calls_on_noise": 0,
+        "rules_dropped": 4,
+        "INCIDENT_MISSES": [],
+        "errors": []
+      }
+    },
+    "deltas": {
+      "model_calls": -1,
+      "tokens": -731,
+      "tokens_pct": 13.2,
+      "latency_s": -7.3,
+      "calls_on_noise": -4
+    },
+    "incident_misses": {
+      "baseline": 0,
+      "tiered": 0
+    },
+    "per_fixture": [
+      {
+        "fixture": "monitor-health-200",
+        "label": "noise",
+        "note": "synthetic monitor, 200 OK",
+        "routed": "drop",
+        "stages": [
+          "gate-0"
+        ],
+        "model_calls": 0,
+        "tokens": 0,
+        "signature": "TIER0_DROPPED"
+      },
+      {
+        "fixture": "favicon-404",
+        "label": "noise",
+        "note": "static asset 404",
+        "routed": "drop",
+        "stages": [
+          "gate-0"
+        ],
+        "model_calls": 0,
+        "tokens": 0,
+        "signature": "TIER0_DROPPED"
+      },
+      {
+        "fixture": "cdn-revalidate",
+        "label": "noise",
+        "note": "CDN cache revalidation",
+        "routed": "drop",
+        "stages": [
+          "gate-0"
+        ],
+        "model_calls": 0,
+        "tokens": 0,
+        "signature": "TIER0_DROPPED"
+      },
+      {
+        "fixture": "recovered-blip",
+        "label": "noise",
+        "note": "transient 502, recovered",
+        "routed": "drop",
+        "stages": [
+          "gate-0"
+        ],
+        "model_calls": 0,
+        "tokens": 0,
+        "signature": "TIER0_DROPPED"
+      },
+      {
+        "fixture": "checkout-503",
+        "label": "signal",
+        "note": "checkout upstream 503",
+        "routed": "tier1",
+        "stages": [
+          "gate-1",
+          "triage"
+        ],
+        "model_calls": 2,
+        "tokens": 1886,
+        "signature": "HTTP_UPSTREAM_503"
+      },
+      {
+        "fixture": "nxdomain-api",
+        "label": "signal",
+        "note": "api hostname NXDOMAIN",
+        "routed": "tier1",
+        "stages": [
+          "gate-1",
+          "triage"
+        ],
+        "model_calls": 2,
+        "tokens": 1468,
+        "signature": "DNS_NXDOMAIN"
+      },
+      {
+        "fixture": "login-overlay",
+        "label": "signal",
+        "note": "credential-capture overlay",
+        "routed": "tier1",
+        "stages": [
+          "gate-1",
+          "triage"
+        ],
+        "model_calls": 2,
+        "tokens": 1448,
+        "signature": "VISUAL_IFRAME_OVERLAY"
+      }
+    ]
+  },
+  "claims": [
+    {
+      "id": "C1",
+      "claim": "Zero incident misses with the gate on",
+      "value": "0/7 missed",
+      "evidence": "bench/evidence/tier0-bench-LIVE-20261027.json"
+    },
+    {
+      "id": "C2",
+      "claim": "Noise never reaches the reasoning model",
+      "value": "0 noise calls, 4 rules-dropped",
+      "evidence": "bench/evidence/tier0-bench-LIVE-20261027.json"
+    },
+    {
+      "id": "C3",
+      "claim": "Token spend falls per incident batch",
+      "value": "5533 -> 4802 (13.2% less)",
+      "evidence": "bench/evidence/tier0-bench-LIVE-20261027.json"
+    },
+    {
+      "id": "C4",
+      "claim": "End-to-end latency falls",
+      "value": "36.8s -> 29.5s",
+      "evidence": "bench/evidence/tier0-bench-LIVE-20261027.json"
+    },
+    {
+      "id": "C5",
+      "claim": "Signal always escalates to tier-1 triage",
+      "value": "3/3 signal fixtures escalated",
+      "evidence": "bench/evidence/tier0-bench-LIVE-20261027.json"
+    }
+  ],
+  "screenshots": [
+    {
+      "path": "demos/fixtures/dashboard_broken.png",
+      "bytes": 19218,
+      "sha256": "6d321c5b15f55bde04d0dd119853f6e81bf9a784a461c4de62ebaf09fe226fe6"
+    },
+    {
+      "path": "demos/fixtures/dashboard_clean.png",
+      "bytes": 9916,
+      "sha256": "a44dc6defea4b25c8a15c2c650736764ff5b4d7a3f7dac8d07d30d7024698650"
+    },
+    {
+      "path": "demos/fixtures/l3-report-20261027.png",
+      "bytes": 673944,
+      "sha256": "86da57e44a9e88153b20a2783019c14b39a67cf227219edf8571c564cc7bfd03"
+    }
+  ],
+  "reproduce": [
+    "python -m demos.l3.freeze_evidence --check",
+    "python -m demos.l3.build_bundle",
+    "python -m demos.l3.render_report"
+  ]
+}

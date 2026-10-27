@@ -1,0 +1,427 @@
+{
+  "summary": {
+    "baseline": {
+      "model_calls": 7,
+      "tokens": 5533,
+      "latency_s": 36.8,
+      "tokens_by_stage": {
+        "triage": {
+          "calls": 7,
+          "tokens": 5533
+        }
+      },
+      "noise_escalated": 4,
+      "calls_on_noise": 4,
+      "rules_dropped": 0,
+      "INCIDENT_MISSES": [],
+      "errors": []
+    },
+    "tiered": {
+      "model_calls": 6,
+      "tokens": 4802,
+      "latency_s": 29.5,
+      "tokens_by_stage": {
+        "gate-1": {
+          "calls": 3,
+          "tokens": 2314
+        },
+        "triage": {
+          "calls": 3,
+          "tokens": 2488
+        }
+      },
+      "noise_escalated": 0,
+      "calls_on_noise": 0,
+      "rules_dropped": 4,
+      "INCIDENT_MISSES": [],
+      "errors": []
+    }
+  },
+  "arms": {
+    "baseline_gate_off": [
+      {
+        "fixture": "monitor-health-200",
+        "label": "noise",
+        "note": "synthetic monitor, 200 OK",
+        "stages": [
+          "triage"
+        ],
+        "stage_detail": [
+          {
+            "stage": "triage",
+            "model": "muse-spark-1.3",
+            "latency_s": 5.65,
+            "tokens": 896,
+            "signature": "HTTP_UPSTREAM_OK"
+          }
+        ],
+        "routed": "tier1",
+        "model_calls": 1,
+        "tokens": 896,
+        "latency_s": 5.7,
+        "ok": true,
+        "error": "",
+        "signature": "HTTP_UPSTREAM_OK"
+      },
+      {
+        "fixture": "favicon-404",
+        "label": "noise",
+        "note": "static asset 404",
+        "stages": [
+          "triage"
+        ],
+        "stage_detail": [
+          {
+            "stage": "triage",
+            "model": "muse-spark-1.3",
+            "latency_s": 4.19,
+            "tokens": 567,
+            "signature": "HTTP_FAVICON_404"
+          }
+        ],
+        "routed": "tier1",
+        "model_calls": 1,
+        "tokens": 567,
+        "latency_s": 4.2,
+        "ok": true,
+        "error": "",
+        "signature": "HTTP_FAVICON_404"
+      },
+      {
+        "fixture": "cdn-revalidate",
+        "label": "noise",
+        "note": "CDN cache revalidation",
+        "stages": [
+          "triage"
+        ],
+        "stage_detail": [
+          {
+            "stage": "triage",
+            "model": "muse-spark-1.3",
+            "latency_s": 4.58,
+            "tokens": 810,
+            "signature": "CDN_CACHE_MISS"
+          }
+        ],
+        "routed": "tier1",
+        "model_calls": 1,
+        "tokens": 810,
+        "latency_s": 4.6,
+        "ok": true,
+        "error": "",
+        "signature": "CDN_CACHE_MISS"
+      },
+      {
+        "fixture": "recovered-blip",
+        "label": "noise",
+        "note": "transient 502, recovered",
+        "stages": [
+          "triage"
+        ],
+        "stage_detail": [
+          {
+            "stage": "triage",
+            "model": "muse-spark-1.3",
+            "latency_s": 7.13,
+            "tokens": 1007,
+            "signature": "HTTP_TRANSIENT_502"
+          }
+        ],
+        "routed": "tier1",
+        "model_calls": 1,
+        "tokens": 1007,
+        "latency_s": 7.1,
+        "ok": true,
+        "error": "",
+        "signature": "HTTP_TRANSIENT_502"
+      },
+      {
+        "fixture": "checkout-503",
+        "label": "signal",
+        "note": "checkout upstream 503",
+        "stages": [
+          "triage"
+        ],
+        "stage_detail": [
+          {
+            "stage": "triage",
+            "model": "muse-spark-1.3",
+            "latency_s": 5.82,
+            "tokens": 920,
+            "signature": "HTTP_UPSTREAM_5XX"
+          }
+        ],
+        "routed": "tier1",
+        "model_calls": 1,
+        "tokens": 920,
+        "latency_s": 5.8,
+        "ok": true,
+        "error": "",
+        "signature": "HTTP_UPSTREAM_5XX"
+      },
+      {
+        "fixture": "nxdomain-api",
+        "label": "signal",
+        "note": "api hostname NXDOMAIN",
+        "stages": [
+          "triage"
+        ],
+        "stage_detail": [
+          {
+            "stage": "triage",
+            "model": "muse-spark-1.3",
+            "latency_s": 5.1,
+            "tokens": 571,
+            "signature": "DNS_NXDOMAIN"
+          }
+        ],
+        "routed": "tier1",
+        "model_calls": 1,
+        "tokens": 571,
+        "latency_s": 5.1,
+        "ok": true,
+        "error": "",
+        "signature": "DNS_NXDOMAIN"
+      },
+      {
+        "fixture": "login-overlay",
+        "label": "signal",
+        "note": "credential-capture overlay",
+        "stages": [
+          "triage"
+        ],
+        "stage_detail": [
+          {
+            "stage": "triage",
+            "model": "muse-spark-1.3",
+            "latency_s": 4.27,
+            "tokens": 762,
+            "signature": "CREDENTIAL_IFRAME_OVERLAY"
+          }
+        ],
+        "routed": "tier1",
+        "model_calls": 1,
+        "tokens": 762,
+        "latency_s": 4.3,
+        "ok": true,
+        "error": "",
+        "signature": "CREDENTIAL_IFRAME_OVERLAY"
+      }
+    ],
+    "tiered_gate_on": [
+      {
+        "fixture": "monitor-health-200",
+        "label": "noise",
+        "note": "synthetic monitor, 200 OK",
+        "stages": [
+          "gate-0"
+        ],
+        "stage_detail": [
+          {
+            "stage": "gate-0",
+            "route": "drop",
+            "code": "BENIGN_MONITOR_HIT",
+            "model": "",
+            "latency_s": 0.0,
+            "tokens": 0,
+            "reason": "monitoring/uptime probe traffic",
+            "error": ""
+          }
+        ],
+        "routed": "drop",
+        "model_calls": 0,
+        "tokens": 0,
+        "latency_s": 0.0,
+        "ok": true,
+        "error": "",
+        "signature": "TIER0_DROPPED"
+      },
+      {
+        "fixture": "favicon-404",
+        "label": "noise",
+        "note": "static asset 404",
+        "stages": [
+          "gate-0"
+        ],
+        "stage_detail": [
+          {
+            "stage": "gate-0",
+            "route": "drop",
+            "code": "BENIGN_STATIC_404",
+            "model": "",
+            "latency_s": 0.0,
+            "tokens": 0,
+            "reason": "404 on a static asset a browser requests unconditionally",
+            "error": ""
+          }
+        ],
+        "routed": "drop",
+        "model_calls": 0,
+        "tokens": 0,
+        "latency_s": 0.0,
+        "ok": true,
+        "error": "",
+        "signature": "TIER0_DROPPED"
+      },
+      {
+        "fixture": "cdn-revalidate",
+        "label": "noise",
+        "note": "CDN cache revalidation",
+        "stages": [
+          "gate-0"
+        ],
+        "stage_detail": [
+          {
+            "stage": "gate-0",
+            "route": "drop",
+            "code": "BENIGN_CDN_CHURN",
+            "model": "",
+            "latency_s": 0.0,
+            "tokens": 0,
+            "reason": "CDN cache churn with no user-visible failure",
+            "error": ""
+          }
+        ],
+        "routed": "drop",
+        "model_calls": 0,
+        "tokens": 0,
+        "latency_s": 0.0,
+        "ok": true,
+        "error": "",
+        "signature": "TIER0_DROPPED"
+      },
+      {
+        "fixture": "recovered-blip",
+        "label": "noise",
+        "note": "transient 502, recovered",
+        "stages": [
+          "gate-0"
+        ],
+        "stage_detail": [
+          {
+            "stage": "gate-0",
+            "route": "drop",
+            "code": "BENIGN_MONITOR_HIT",
+            "model": "",
+            "latency_s": 0.0,
+            "tokens": 0,
+            "reason": "monitoring/uptime probe traffic",
+            "error": ""
+          }
+        ],
+        "routed": "drop",
+        "model_calls": 0,
+        "tokens": 0,
+        "latency_s": 0.0,
+        "ok": true,
+        "error": "",
+        "signature": "TIER0_DROPPED"
+      },
+      {
+        "fixture": "checkout-503",
+        "label": "signal",
+        "note": "checkout upstream 503",
+        "stages": [
+          "gate-1",
+          "triage"
+        ],
+        "stage_detail": [
+          {
+            "stage": "gate-1",
+            "route": "escalate",
+            "code": "HTTP 503 on critical /checkout endpoint is user-visible service failure, not routine monitor/static 404/scanner noise",
+            "model": "muse-spark-1.2",
+            "latency_s": 3.06,
+            "tokens": 822,
+            "reason": "tier-0 says signal",
+            "error": ""
+          },
+          {
+            "stage": "triage",
+            "model": "muse-spark-1.3",
+            "latency_s": 5.64,
+            "tokens": 1064,
+            "signature": "HTTP_UPSTREAM_503"
+          }
+        ],
+        "routed": "tier1",
+        "model_calls": 2,
+        "tokens": 1886,
+        "latency_s": 9.7,
+        "ok": true,
+        "error": "",
+        "signature": "HTTP_UPSTREAM_503"
+      },
+      {
+        "fixture": "nxdomain-api",
+        "label": "signal",
+        "note": "api hostname NXDOMAIN",
+        "stages": [
+          "gate-1",
+          "triage"
+        ],
+        "stage_detail": [
+          {
+            "stage": "gate-1",
+            "route": "escalate",
+            "code": "NXDOMAIN for api.client.example.com is api DNS failure, user-visible outage, not routine scanner/monitor noise",
+            "model": "muse-spark-1.2",
+            "latency_s": 3.61,
+            "tokens": 781,
+            "reason": "tier-0 says signal",
+            "error": ""
+          },
+          {
+            "stage": "triage",
+            "model": "muse-spark-1.3",
+            "latency_s": 5.46,
+            "tokens": 687,
+            "signature": "DNS_NXDOMAIN"
+          }
+        ],
+        "routed": "tier1",
+        "model_calls": 2,
+        "tokens": 1468,
+        "latency_s": 11.8,
+        "ok": true,
+        "error": "",
+        "signature": "DNS_NXDOMAIN"
+      },
+      {
+        "fixture": "login-overlay",
+        "label": "signal",
+        "note": "credential-capture overlay",
+        "stages": [
+          "gate-1",
+          "triage"
+        ],
+        "stage_detail": [
+          {
+            "stage": "gate-1",
+            "route": "escalate",
+            "code": "fixed iframe overlay capturing credentials on login is active user-visible compromise, not routine monitor/scanner noise",
+            "model": "muse-spark-1.2",
+            "latency_s": 2.9,
+            "tokens": 711,
+            "reason": "tier-0 says signal",
+            "error": ""
+          },
+          {
+            "stage": "triage",
+            "model": "muse-spark-1.3",
+            "latency_s": 4.41,
+            "tokens": 737,
+            "signature": "VISUAL_IFRAME_OVERLAY"
+          }
+        ],
+        "routed": "tier1",
+        "model_calls": 2,
+        "tokens": 1448,
+        "latency_s": 8.0,
+        "ok": true,
+        "error": "",
+        "signature": "VISUAL_IFRAME_OVERLAY"
+      }
+    ]
+  }
+}

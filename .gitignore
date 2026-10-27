@@ -20,3 +20,6 @@ sentinel-demo3-*/
 *.orig
 # runtime job logs
 runtime/
+
+# render artifacts (regenerate with demos/l3/video/make_video.sh)
+demos/l3/video/frames/

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SentinelPulse — demo bundle</title><style>
+:root{--bg:#0a0a0f;--panel:#12121a;--line:#232334;--ink:#e7e7f0;--dim:#8b8ba3;
+--ok:#3ddc97;--warn:#ffb454;--bad:#ff5c7a;--accent:#6c8cff}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(1200px 600px at 20% -10%,#1a1a2e 0%,var(--bg) 55%);
+color:var(--ink);font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1040px;margin:0 auto;padding:48px 24px 80px}
+h1{font-size:28px;margin:0 0 6px;letter-spacing:-.02em}h2{font-size:16px;text-transform:uppercase;
+letter-spacing:.12em;color:var(--dim);margin:40px 0 14px;font-weight:600}
+.sub{color:var(--dim);margin:0 0 28px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}
+.card{background:linear-gradient(180deg,#14141d,#101017);border:1px solid var(--line);
+border-radius:14px;padding:16px 18px}
+.card .k{color:var(--dim);font-size:12px;text-transform:uppercase;letter-spacing:.1em}
+.card .v{font-size:24px;font-weight:600;margin-top:6px;letter-spacing:-.02em}
+.card .d{color:var(--dim);font-size:13px;margin-top:4px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line)}
+th{color:var(--dim);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.08em}
+tr:hover td{background:#14141d}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600}
+.pill.drop{background:rgba(61,220,151,.12);color:var(--ok)}
+.pill.esc{background:rgba(108,140,255,.14);color:var(--accent)}
+.pill.noise{background:rgba(139,139,163,.12);color:var(--dim)}
+.pill.signal{background:rgba(255,180,84,.14);color:var(--warn)}
+code{background:#191922;border:1px solid var(--line);padding:1px 6px;border-radius:6px;font-size:13px}
+.bar{height:10px;border-radius:999px;background:#1c1c28;overflow:hidden;margin-top:8px}
+.bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),#8fa6ff)}
+.bar.alt>i{background:linear-gradient(90deg,var(--ok),#8affc9)}
+.claim{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid var(--line)}
+.claim b{min-width:34px;color:var(--accent)}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:var(--dim)}
+footer{margin-top:56px;color:var(--dim);font-size:12px;border-top:1px solid var(--line);padding-top:18px}
+</style></head>
+<body><div class="wrap">
+<h1>SentinelPulse</h1>
+<p class="sub">An incident-triage agent that drops the noise before it costs a token, then plans the fix for what is left.<br>
+Track <b>indie</b> · mode <b>replay</b> · generated 2026-10-27T16:27:02+00:00</p>
+
+<div class="grid"><div class="card"><div class="k">tokens</div><div class="v">4802 <span style="color:var(--dim);font-size:14px">from 5533</span></div><div class="bar"><i style="width:100%"></i></div><div class="bar alt"><i style="width:87%"></i></div><div class="d">grey = gate off · green = gate on</div></div><div class="card"><div class="k">model calls</div><div class="v">6 <span style="color:var(--dim);font-size:14px">from 7</span></div><div class="bar"><i style="width:100%"></i></div><div class="bar alt"><i style="width:86%"></i></div><div class="d">grey = gate off · green = gate on</div></div><div class="card"><div class="k">noise calls</div><div class="v">0 <span style="color:var(--dim);font-size:14px">from 4</span></div><div class="bar"><i style="width:100%"></i></div><div class="bar alt"><i style="width:3%"></i></div><div class="d">grey = gate off · green = gate on</div></div><div class="card"><div class="k">latency</div><div class="v">29.5s <span style="color:var(--dim);font-size:14px">from 36.8s</span></div><div class="bar"><i style="width:100%"></i></div><div class="bar alt"><i style="width:80%"></i></div><div class="d">grey = gate off · green = gate on</div></div></div>
+<div class="grid" style="margin-top:14px">
+  <div class="card"><div class="k">incident misses</div><div class="v" style="color:var(--ok)">
+  0/7</div>
+  <div class="d">gate off: 0/7</div></div>
+  <div class="card"><div class="k">rules-dropped noise</div><div class="v" style="color:var(--ok)">
+  4</div>
+  <div class="d">zero tokens spent on them</div></div>
+  <div class="card"><div class="k">token delta</div><div class="v">
+  13.2%</div><div class="d">fewer tokens per batch</div></div>
+</div>
+
+<h2>Claims → evidence</h2><div class='claim'><b>C1</b><div>Zero incident misses with the gate on<div class='mono'>0/7 missed · bench/evidence/tier0-bench-LIVE-20261027.json</div></div></div><div class='claim'><b>C2</b><div>Noise never reaches the reasoning model<div class='mono'>0 noise calls, 4 rules-dropped · bench/evidence/tier0-bench-LIVE-20261027.json</div></div></div><div class='claim'><b>C3</b><div>Token spend falls per incident batch<div class='mono'>5533 -&gt; 4802 (13.2% less) · bench/evidence/tier0-bench-LIVE-20261027.json</div></div></div><div class='claim'><b>C4</b><div>End-to-end latency falls<div class='mono'>36.8s -&gt; 29.5s · bench/evidence/tier0-bench-LIVE-20261027.json</div></div></div><div class='claim'><b>C5</b><div>Signal always escalates to tier-1 triage<div class='mono'>3/3 signal fixtures escalated · bench/evidence/tier0-bench-LIVE-20261027.json</div></div></div>
+
+<h2>Per-fixture routing (gate on)</h2>
+<table><thead><tr><th>fixture</th><th>label</th><th>route</th><th>stages</th><th>tokens</th>
+<th>signature</th></tr></thead><tbody><tr><td>monitor-health-200</td><td><span class='pill noise'>noise</span></td><td><span class='pill drop'>drop</span></td><td class='mono'>gate-0</td><td>0</td><td class='mono'>TIER0_DROPPED</td></tr><tr><td>favicon-404</td><td><span class='pill noise'>noise</span></td><td><span class='pill drop'>drop</span></td><td class='mono'>gate-0</td><td>0</td><td class='mono'>TIER0_DROPPED</td></tr><tr><td>cdn-revalidate</td><td><span class='pill noise'>noise</span></td><td><span class='pill drop'>drop</span></td><td class='mono'>gate-0</td><td>0</td><td class='mono'>TIER0_DROPPED</td></tr><tr><td>recovered-blip</td><td><span class='pill noise'>noise</span></td><td><span class='pill drop'>drop</span></td><td class='mono'>gate-0</td><td>0</td><td class='mono'>TIER0_DROPPED</td></tr><tr><td>checkout-503</td><td><span class='pill signal'>signal</span></td><td><span class='pill esc'>tier1</span></td><td class='mono'>gate-1, triage</td><td>1886</td><td class='mono'>HTTP_UPSTREAM_503</td></tr><tr><td>nxdomain-api</td><td><span class='pill signal'>signal</span></td><td><span class='pill esc'>tier1</span></td><td class='mono'>gate-1, triage</td><td>1468</td><td class='mono'>DNS_NXDOMAIN</td></tr><tr><td>login-overlay</td><td><span class='pill signal'>signal</span></td><td><span class='pill esc'>tier1</span></td><td class='mono'>gate-1, triage</td><td>1448</td><td class='mono'>VISUAL_IFRAME_OVERLAY</td></tr></tbody></table>
+
+<h2>Frozen inputs</h2>
+<table><thead><tr><th>artifact</th><th>sha256</th><th>bytes</th></tr></thead>
+<tbody><tr><td class='mono'>bench/evidence/tier0-bench-LIVE-20261027.json</td><td class='mono'>0071ca3a688c165ec2e1939a8ffc7e50</td><td>10721</td></tr><tr><td class='mono'>bench/evidence/tier0-bench-20261020.json</td><td class='mono'>7dd3262e1d6107384b90d6e7e2484ed1</td><td>10777</td></tr><tr><td class='mono'>bench/tier0_bench.py</td><td class='mono'>ef4da6ac4e608c529c4153e11a08e678</td><td>8556</td></tr><tr><td class='mono'>app/core/gatekeeper.py</td><td class='mono'>22a42e07472beee5203d4444b3042b45</td><td>10679</td></tr></tbody></table>
+
+<h2>Captured screenshots</h2><ul><li class='mono'>demos/fixtures/dashboard_broken.png · 19218 B · 6d321c5b15f55bde</li><li class='mono'>demos/fixtures/dashboard_clean.png · 9916 B · a44dc6defea4b25c</li><li class='mono'>demos/fixtures/l3-report-20261027.png · 673944 B · 86da57e44a9e8815</li></ul>
+
+<h2>Reproduce</h2><ul>
+<li><code>python -m demos.l3.freeze_evidence --check</code></li><li><code>python -m demos.l3.build_bundle</code></li><li><code>python -m demos.l3.render_report</code></li>
+</ul>
+
+<footer>Generated offline from <code>bench/evidence/tier0-bench-LIVE-20261027.json</code>. Every number above is read
+from the frozen evidence file — none is typed by hand.</footer>
+</div></body></html>

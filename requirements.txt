@@ -1,0 +1,10 @@
+# SentinelPulse runtime dependencies.
+# The pipeline itself is stdlib-first: replay, freeze, bundle and report need nothing below.
+# Extras are only for the optional pieces.
+
+playwright>=1.44        # headless Chromium frames for the 90s demo renderer
+Pillow>=10.0            # vision probe decoding (demos/demo2_vision.py)
+PyYAML>=6.0             # fixture/config loading
+
+# dev
+pytest>=8.0
