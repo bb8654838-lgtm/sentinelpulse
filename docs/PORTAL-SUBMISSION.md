@@ -18,43 +18,45 @@ SentinelPulse — noise out, signal triaged
 ## FIELD 2 — Elevator pitch (one or two sentences)
 
 ```
-A tier-0 gate that keeps alert fatigue away from the reasoning model: deterministic rules drop
-provable noise at zero tokens, and only real signal escalates to Meta Muse (muse-spark-1.3).
-Measured on a 7-fixture replay: 0 noise calls, -13.2% tokens, -19.8% latency, 0/7 incidents missed.
+Save model reasoning for alerts that need it. A tier-0 gate applies deterministic rules to
+suppress known noise at zero tokens and escalates unresolved alerts to Meta Muse (muse-spark-1.3),
+which turns each escalation into a triage note with hypotheses and next actions.
+On a 7-fixture replay, gate off vs on: 0 noise model calls, -13.2% tokens, -19.8% latency,
+0/7 incidents missed.
 ```
 
 ## FIELD 3 — Detailed description
 
 ```
-Every on-call queue fills with events that were never incidents: health checks that returned 200,
-favicon 404s, CDN revalidations, blips that self-recovered before anyone looked. Most "AI SRE"
-stacks hand all of it to a reasoning model and pay tokens, latency and attention for nothing.
+Every on-call queue fills with non-incidents: health checks returning 200, favicon 404s, CDN
+revalidations, blips that self-recovered before anyone looked. Most "AI SRE" stacks send it all to a
+reasoning model, paying in tokens, latency and attention for nothing.
 
-SentinelPulse puts a deterministic gate in front of the model. gate-0 applies rules to the
-normalized event and drops provable noise at zero tokens. Survivors are typed by a cheap
-classifier, and only real signal reaches tier-1 triage on Meta's Muse API (muse-spark-1.3),
-which drafts the triage note, hypotheses and next actions. A sandboxed remediator can propose a
-minimal patch; the authenticated PR path exists but is opt-in and unused in the demo.
+SentinelPulse puts a deterministic gate before the model. gate-0 applies rules to the normalized
+event, dropping provable noise at zero tokens. A cheap classifier categorizes the survivors, and only
+events that clear gate-0 reach tier-1 triage on Meta's Muse API (muse-spark-1.3), which drafts the
+triage note, hypotheses and next actions. A sandboxed remediator can propose a minimal patch; the
+authenticated PR path is opt-in and unused in the demo.
 
-The claim is not "the model is smart" - it is that the model never sees the noise at all.
-Replay of the same 7 fixtures, gate off vs gate on, single run:
+The gate does not make the model smarter; it keeps noise away from it. Same 7 fixtures replayed,
+gate off vs gate on, single run:
   C1 incidents missed      0/7 -> 0/7
-  C2 noise model calls     4   -> 0     (4 dropped by rules)
+  C2 noise model calls     4   -> 0     (all four blocked by rules)
   C3 tokens                5533 -> 4802 (-13.2%)
   C4 end-to-end latency    36.8s -> 29.5s (-19.8%)
   C5 signal escalation     3/3 -> 3/3
 
-Evidence is frozen by SHA-256 (bench/evidence/FREEZE-20261027.json), so every number is tied to
-exact bytes. `python3 -m demos.l3.freeze_evidence --check` fails loudly on any drift, and
-`bash demos/l3/demo_take.sh` runs a 4-step preflight (freeze -> bundle -> report -> dry live shape)
-that aborts with exit 2 if the evidence moved. The report is a single self-contained HTML file with
-no CDN, so it renders air-gapped. Live mode refuses with exit 4 unless --confirm-live is passed, and
-BudgetGuard reserves calls and tokens against a hard ceiling before any spend.
+SHA-256 freezes the evidence (bench/evidence/FREEZE-20261027.json), tying every number to exact
+bytes. `python3 -m demos.l3.freeze_evidence --check` fails loudly on any drift, and
+`bash demos/l3/demo_take.sh` runs a 4-step preflight (freeze -> bundle -> report -> dry live shape),
+aborting with exit 2 on evidence drift. The report is a single self-contained, CDN-free HTML file
+that renders air-gapped. Live mode refuses with exit 4 without --confirm-live, and BudgetGuard
+reserves calls and tokens against a hard ceiling before any spend.
 
-Built for the Meta AI Developer Hackathon, Indie track, solo. Inside the window (Oct 26 - Nov 4):
-the whole demos/l3 lane - freeze, bundle, report renderer, live runner, preflight harness, and the
-90-second video renderer - plus the 2026-10-27 bench run those claims cite. The app/ gate prototype
-from Oct 14-20 is disclosed as pre-window: it is the thing being measured, not a claimed deliverable.
+Built solo for the Meta AI Developer Hackathon, Indie track. In-window (Oct 26 - Nov 4): the full
+demos/l3 lane - freeze, bundle, report renderer, live runner, preflight harness, and 90-second video
+renderer - plus the 2026-10-27 bench run those claims cite. The app/ gate prototype from Oct 14-20
+is disclosed as pre-window: the measurement target, not a claimed deliverable.
 ```
 
 ## FIELD 4 — GitHub repository URL
